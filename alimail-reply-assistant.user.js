@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Alimail Reply Assistant
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Auto-generate professional email replies for Alimail webmail
+// @version      2.0
+// @description  Auto-generate professional email replies for Alimail webmail - 3 Column Layout
 // @author       Tifa Lockhart
 // @match        https://qiye.aliyun.com/alimail/*
 // @grant        GM_addStyle
@@ -17,10 +17,13 @@
     // Server configuration
     const SERVER_URL = 'http://localhost:8000';
 
-    // CSS Styles - Matching Cantonese Romanizer look and feel
+    // CSS Styles - 3 Column Layout
     const styles = `
         #alimail-reply-overlay {
             position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             z-index: 999999;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -29,11 +32,12 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             font-size: 13px;
-            max-width: 500px;
-            width: 400px;
-            max-height: 85vh;
+            width: 95vw;
+            max-width: 1200px;
+            height: 85vh;
+            max-height: 700px;
             display: none;
-            cursor: move;
+            cursor: default;
             user-select: text;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
@@ -41,13 +45,14 @@
         }
         
         #alimail-reply-overlay.visible {
-            display: block;
+            display: flex;
+            flex-direction: column;
             animation: fadeIn 0.2s ease-out;
         }
         
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         }
         
         #alimail-reply-overlay .alimail-header {
@@ -59,6 +64,7 @@
             align-items: center;
             border-bottom: 1px solid rgba(255,255,255,0.2);
             padding-bottom: 10px;
+            flex-shrink: 0;
         }
         
         #alimail-reply-overlay .alimail-close {
@@ -75,31 +81,79 @@
         }
         
         #alimail-reply-overlay .alimail-content {
-            max-height: calc(85vh - 120px);
-            overflow-y: auto;
+            display: flex;
+            flex: 1;
+            gap: 16px;
+            overflow: hidden;
+            min-height: 0;
         }
         
-        #alimail-reply-overlay .alimail-content::-webkit-scrollbar {
+        /* Column Styles */
+        #alimail-reply-overlay .alimail-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 12px;
+            overflow: hidden;
+        }
+        
+        #alimail-reply-overlay .alimail-column-header {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        #alimail-reply-overlay .alimail-column-content {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        
+        #alimail-reply-overlay .alimail-column-content::-webkit-scrollbar {
             width: 6px;
         }
         
-        #alimail-reply-overlay .alimail-content::-webkit-scrollbar-track {
+        #alimail-reply-overlay .alimail-column-content::-webkit-scrollbar-track {
             background: rgba(255,255,255,0.1);
             border-radius: 3px;
         }
         
-        #alimail-reply-overlay .alimail-content::-webkit-scrollbar-thumb {
+        #alimail-reply-overlay .alimail-column-content::-webkit-scrollbar-thumb {
             background: rgba(255,255,255,0.3);
             border-radius: 3px;
         }
         
+        /* Original Email Column */
+        #alimail-reply-overlay .alimail-original-content {
+            font-size: 12px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            opacity: 0.9;
+        }
+        
+        #alimail-reply-overlay .alimail-original-placeholder {
+            font-style: italic;
+            opacity: 0.6;
+            font-size: 12px;
+        }
+        
+        /* Middle Column - Input */
         #alimail-reply-overlay .alimail-section {
             margin-bottom: 12px;
         }
         
         #alimail-reply-overlay .alimail-label {
             font-size: 11px;
-            opacity: 0.8;
+            opacity: 0.9;
             margin-bottom: 4px;
             font-weight: 500;
         }
@@ -114,7 +168,7 @@
             font-size: 13px;
             font-family: inherit;
             box-sizing: border-box;
-            resize: vertical;
+            resize: none;
         }
         
         #alimail-reply-overlay .alimail-input::placeholder {
@@ -127,8 +181,8 @@
         }
         
         #alimail-reply-overlay textarea.alimail-input {
-            min-height: 80px;
-            max-height: 150px;
+            min-height: 200px;
+            height: calc(100% - 60px);
         }
         
         #alimail-reply-overlay .alimail-select {
@@ -151,6 +205,15 @@
         #alimail-reply-overlay .alimail-select option {
             background: #667eea;
             color: white;
+        }
+        
+        #alimail-reply-overlay .alimail-row {
+            display: flex;
+            gap: 8px;
+        }
+        
+        #alimail-reply-overlay .alimail-col {
+            flex: 1;
         }
         
         #alimail-reply-overlay .alimail-button {
@@ -181,28 +244,39 @@
             width: 100%;
             background: rgba(100,255,100,0.25);
             font-weight: 600;
+            margin-top: 8px;
+            padding: 12px;
         }
         
         #alimail-reply-overlay .alimail-generate-btn:hover:not(:disabled) {
             background: rgba(100,255,100,0.35);
         }
         
-        #alimail-reply-overlay .alimail-result {
-            background: rgba(0,0,0,0.25);
+        /* Right Column - Result */
+        #alimail-reply-overlay .alimail-result-content {
+            background: rgba(0,0,0,0.2);
             padding: 12px;
             border-radius: 6px;
-            margin-top: 12px;
-            white-space: pre-wrap;
+            font-size: 13px;
             line-height: 1.6;
-            font-size: 12px;
-            max-height: 200px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 200px;
+            max-height: calc(100% - 60px);
             overflow-y: auto;
         }
         
+        #alimail-reply-overlay .alimail-result-placeholder {
+            font-style: italic;
+            opacity: 0.6;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
         #alimail-reply-overlay .alimail-copy-btn {
-            margin-top: 10px;
             width: 100%;
             background: rgba(100,150,255,0.3);
+            margin-top: 10px;
         }
         
         #alimail-reply-overlay .alimail-copy-btn:hover:not(:disabled) {
@@ -215,7 +289,7 @@
         
         #alimail-reply-overlay .alimail-loading {
             text-align: center;
-            padding: 20px;
+            padding: 40px 20px;
             font-size: 14px;
         }
         
@@ -225,27 +299,6 @@
             border-radius: 6px;
             font-size: 12px;
             line-height: 1.4;
-            margin-top: 10px;
-        }
-        
-        #alimail-reply-overlay .alimail-original-preview {
-            background: rgba(255,255,255,0.1);
-            padding: 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            max-height: 60px;
-            overflow-y: auto;
-            opacity: 0.9;
-            line-height: 1.4;
-        }
-        
-        #alimail-reply-overlay .alimail-row {
-            display: flex;
-            gap: 8px;
-        }
-        
-        #alimail-reply-overlay .alimail-col {
-            flex: 1;
         }
 
         /* Floating button to open the assistant */
@@ -287,51 +340,82 @@
         document.head.appendChild(styleEl);
     }
 
-    // Create overlay element
+    // Global state
+    let generatedReplyText = '';
+
+    // Create overlay element with 3-column layout
     function createOverlay() {
         const overlay = document.createElement('div');
         overlay.id = 'alimail-reply-overlay';
         overlay.innerHTML = `
             <div class="alimail-header">
                 <span>📝 AI Reply Assistant</span>
-                <span class="alimail-close" title="Close">✕</span>
+                <span class="alimail-close" title="Close (Esc)">✕</span>
             </div>
             <div class="alimail-content">
-                <div class="alimail-section">
-                    <div class="alimail-label">Original Email Preview:</div>
-                    <div class="alimail-original-preview" id="alimail-original-text">Loading...</div>
+                <!-- Left Column: Original Email -->
+                <div class="alimail-column">
+                    <div class="alimail-column-header">
+                        <span>📧</span>
+                        <span>Original Email</span>
+                    </div>
+                    <div class="alimail-column-content">
+                        <div class="alimail-original-content" id="alimail-original-text">
+                            <div class="alimail-original-placeholder">Loading original email...</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="alimail-section">
-                    <div class="alimail-label">Your Points (bullet points or notes):</div>
-                    <textarea class="alimail-input" id="alimail-user-input" placeholder="Enter your key points here...
+                
+                <!-- Middle Column: User Input -->
+                <div class="alimail-column">
+                    <div class="alimail-column-header">
+                        <span>✏️</span>
+                        <span>Your Key Points</span>
+                    </div>
+                    <div class="alimail-column-content">
+                        <div class="alimail-section" style="height: calc(100% - 120px);">
+                            <textarea class="alimail-input" id="alimail-user-input" placeholder="Enter your key points here...
+
 - Apologize for the delay
 - Request more documents
 - Meeting scheduled for Friday"></textarea>
-                </div>
-                <div class="alimail-row">
-                    <div class="alimail-col">
-                        <div class="alimail-label">Tone:</div>
-                        <select class="alimail-select" id="alimail-tone">
-                            <option value="professional">Professional</option>
-                            <option value="friendly">Friendly</option>
-                            <option value="concise">Concise</option>
-                            <option value="detailed">Detailed</option>
-                        </select>
+                        </div>
+                        <div class="alimail-row">
+                            <div class="alimail-col">
+                                <div class="alimail-label">Tone:</div>
+                                <select class="alimail-select" id="alimail-tone">
+                                    <option value="professional">Professional</option>
+                                    <option value="friendly">Friendly</option>
+                                    <option value="concise">Concise</option>
+                                    <option value="detailed">Detailed</option>
+                                </select>
+                            </div>
+                            <div class="alimail-col">
+                                <div class="alimail-label">Language:</div>
+                                <select class="alimail-select" id="alimail-language">
+                                    <option value="english">English</option>
+                                    <option value="chinese">繁體中文</option>
+                                    <option value="portuguese">Portuguese</option>
+                                    <option value="mixed">Mixed</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="alimail-button alimail-generate-btn" id="alimail-generate">✨ Generate Reply</button>
                     </div>
-                    <div class="alimail-col">
-                        <div class="alimail-label">Language:</div>
-                        <select class="alimail-select" id="alimail-language">
-                            <option value="english">English</option>
-                            <option value="chinese">繁體中文</option>
-                            <option value="portuguese">Portuguese</option>
-                            <option value="mixed">Mixed</option>
-                        </select>
+                </div>
+                
+                <!-- Right Column: Generated Reply -->
+                <div class="alimail-column">
+                    <div class="alimail-column-header">
+                        <span>✨</span>
+                        <span>Generated Reply</span>
+                    </div>
+                    <div class="alimail-column-content" id="alimail-result-container">
+                        <div class="alimail-result-placeholder">
+                            Click "Generate Reply" to create a professional email response
+                        </div>
                     </div>
                 </div>
-                <div class="alimail-section" style="margin-top: 12px;">
-                    <button class="alimail-button alimail-generate-btn" id="alimail-generate">✨ Generate Reply</button>
-                </div>
-                <div id="alimail-result-container"></div>
             </div>
         `;
         document.body.appendChild(overlay);
@@ -347,9 +431,6 @@
             e.stopPropagation();
             generateReply();
         });
-
-        // Make draggable
-        makeDraggable(overlay);
 
         return overlay;
     }
@@ -370,74 +451,24 @@
             } else {
                 updateOriginalEmail();
                 overlay.classList.add('visible');
-                // Position near the button
-                const btnRect = btn.getBoundingClientRect();
-                overlay.style.top = 'auto';
-                overlay.style.bottom = (window.innerHeight - btnRect.top + 10) + 'px';
-                overlay.style.right = '20px';
-                overlay.style.left = 'auto';
             }
         });
 
         return btn;
     }
 
-    // Make element draggable
-    function makeDraggable(element) {
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-        const header = element.querySelector('.alimail-header');
-        
-        (header || element).onmousedown = dragMouseDown;
-
-        function dragMouseDown(e) {
-            if (e.target.classList.contains('alimail-close')) return;
-            e.preventDefault();
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
-        }
-
-        function elementDrag(e) {
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            
-            let newTop = element.offsetTop - pos2;
-            let newLeft = element.offsetLeft - pos1;
-            
-            // Keep within viewport
-            const rect = element.getBoundingClientRect();
-            newTop = Math.max(10, Math.min(newTop, window.innerHeight - rect.height - 10));
-            newLeft = Math.max(10, Math.min(newLeft, window.innerWidth - rect.width - 10));
-            
-            element.style.top = newTop + "px";
-            element.style.left = newLeft + "px";
-            element.style.bottom = 'auto';
-            element.style.right = 'auto';
-        }
-
-        function closeDragElement() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
-    }
-
     // Extract original email content from Alimail compose page
     function extractOriginalEmail() {
         // Try multiple selectors to find the original email content
-        // Alimail may have different structures depending on the view
-        
-        // Method 1: Look for the quoted email content in reply
         const quotedSelectors = [
             '.email-content-body',
             '.mail-body',
             '.message-body',
             '[class*="body"]',
             '.content-editable',
-            '.email-body'
+            '.email-body',
+            '.reply-content',
+            '.quoted-content'
         ];
         
         for (const selector of quotedSelectors) {
@@ -447,7 +478,7 @@
             }
         }
         
-        // Method 2: Look for iframe content (common in webmail)
+        // Look for iframe content
         const iframes = document.querySelectorAll('iframe');
         for (const iframe of iframes) {
             try {
@@ -461,30 +492,26 @@
             }
         }
         
-        // Method 3: Get all visible text in the main content area
+        // Get main content area
         const mainContent = document.querySelector('.main-content, .content, #content, .container');
         if (mainContent) {
-            return mainContent.textContent.trim().substring(0, 2000);
+            return mainContent.textContent.trim().substring(0, 3000);
         }
         
         return '';
     }
 
-    // Update the original email preview in the overlay
+    // Update the original email display
     function updateOriginalEmail() {
         const originalText = extractOriginalEmail();
-        const previewEl = document.getElementById('alimail-original-text');
-        if (previewEl) {
+        const container = document.getElementById('alimail-original-text');
+        if (container) {
             if (originalText) {
-                // Show first 200 chars with ellipsis if longer
-                const preview = originalText.length > 200 
-                    ? originalText.substring(0, 200) + '...' 
-                    : originalText;
-                previewEl.textContent = preview;
-                previewEl.dataset.fullText = originalText;
+                container.textContent = originalText;
+                container.dataset.fullText = originalText;
             } else {
-                previewEl.textContent = 'Could not extract original email. Please paste it manually in the notes if needed.';
-                previewEl.dataset.fullText = '';
+                container.innerHTML = '<div class="alimail-original-placeholder">Could not extract original email. The email content may be in a different format.</div>';
+                container.dataset.fullText = '';
             }
         }
     }
@@ -536,13 +563,13 @@
         const userInput = document.getElementById('alimail-user-input').value.trim();
         const tone = document.getElementById('alimail-tone').value;
         const language = document.getElementById('alimail-language').value;
-        const previewEl = document.getElementById('alimail-original-text');
-        const originalEmail = previewEl ? (previewEl.dataset.fullText || previewEl.textContent) : '';
+        const originalEl = document.getElementById('alimail-original-text');
+        const originalEmail = originalEl ? (originalEl.dataset.fullText || originalEl.textContent) : '';
         const resultContainer = document.getElementById('alimail-result-container');
         const generateBtn = document.getElementById('alimail-generate');
         
         if (!userInput) {
-            resultContainer.innerHTML = '<div class="alimail-error">Please enter some points for the reply.</div>';
+            resultContainer.innerHTML = '<div class="alimail-error">Please enter some key points for the reply.</div>';
             return;
         }
         
@@ -553,7 +580,8 @@
         
         try {
             const response = await callGenerateAPI(originalEmail, userInput, tone, language);
-            showResult(response.generated_reply);
+            generatedReplyText = response.generated_reply;
+            showResult(generatedReplyText);
         } catch (error) {
             resultContainer.innerHTML = `
                 <div class="alimail-error">
@@ -573,11 +601,8 @@
         const resultContainer = document.getElementById('alimail-result-container');
         
         resultContainer.innerHTML = `
-            <div class="alimail-section">
-                <div class="alimail-label">Generated Reply:</div>
-                <div class="alimail-result">${escapeHtml(generatedText)}</div>
-                <button class="alimail-button alimail-copy-btn" id="alimail-copy">📋 Copy to Clipboard</button>
-            </div>
+            <div class="alimail-result-content">${escapeHtml(generatedText)}</div>
+            <button class="alimail-button alimail-copy-btn" id="alimail-copy">📋 Copy to Clipboard</button>
         `;
         
         // Copy button handler
@@ -591,7 +616,7 @@
                     this.classList.remove('copied');
                 }, 2000);
             } catch (err) {
-                // Fallback for older browsers
+                // Fallback
                 const textArea = document.createElement('textarea');
                 textArea.value = generatedText;
                 document.body.appendChild(textArea);
