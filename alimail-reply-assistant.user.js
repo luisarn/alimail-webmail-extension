@@ -77,11 +77,11 @@
         },
         // Default fallback
         default: {
-            primary: '#1a73e8',
-            primaryHover: '#1557b0',
-            buttonText: '#ffffff',
-            copyBtn: '#34a853',
-            copyBtnHover: '#2d8e47'
+            primary: '#fff',
+            primaryHover: '#ffffff',
+            buttonText: '#3a3a3a',
+            copyBtn: '#fff',
+            copyBtnHover: '#fff'
         }
     };
 
@@ -742,6 +742,13 @@ Example:
         
         if (!subscriptBtn) return null;
 
+        // Create separator element
+        const separator = document.createElement('div');
+        separator.id = 'alimail-ai-separator';
+        separator.className = 'e_editor_toolbar_item e_editor_toolbar_separator';
+        separator.setAttribute('_id', 'separator');
+        separator.innerHTML = '<div class="e_editor_toolbar_separator_b"></div>';
+
         // Create AI button matching Alimail's toolbar style
         const aiBtn = document.createElement('div');
         aiBtn.id = 'alimail-ai-toolbar-btn';
@@ -752,8 +759,9 @@ Example:
         aiBtn.setAttribute('jstype', 'ToolbarCommonButton');
         aiBtn.innerHTML = '<b class="e_i e_i_fs16 e_i_hover ai-icon" style="font-style: normal;">AI</b>';
 
-        // Insert after subscript button
-        subscriptBtn.insertAdjacentElement('afterend', aiBtn);
+        // Insert separator and AI button after subscript button
+        subscriptBtn.insertAdjacentElement('afterend', separator);
+        separator.insertAdjacentElement('afterend', aiBtn);
 
         // Add click handler
         aiBtn.addEventListener('click', (e) => {
@@ -772,10 +780,12 @@ Example:
         return aiBtn;
     }
 
-    // Remove toolbar button if it exists
+    // Remove toolbar button and separator if they exist
     function removeToolbarButton() {
         const btn = document.getElementById('alimail-ai-toolbar-btn');
+        const separator = document.getElementById('alimail-ai-separator');
         if (btn) btn.remove();
+        if (separator) separator.remove();
     }
 
     // Extract original email content
