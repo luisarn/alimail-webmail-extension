@@ -503,16 +503,16 @@
         }
         
         #alimail-reply-overlay .alimail-insert-btn {
-            background: rgb(239, 73, 68);
-            color: white;
+            background: rgb(239, 73, 68) !important;
+            color: white !important;
         }
         
         #alimail-reply-overlay .alimail-insert-btn:hover:not(:disabled) {
-            background: rgb(220, 60, 55);
+            background: rgb(220, 60, 55) !important;
         }
         
         #alimail-reply-overlay .alimail-insert-btn.inserted {
-            background: #34a853;
+            background: #34a853 !important;
         }
         
         #alimail-reply-overlay .alimail-button-row {
