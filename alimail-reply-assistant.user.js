@@ -221,7 +221,7 @@
             width: 95vw;
             max-width: 900px;
             height: 85vh;
-            max-height: 600px;
+            max-height: 610px;
             display: none;
             cursor: default;
             user-select: text;
