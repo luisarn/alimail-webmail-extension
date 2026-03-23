@@ -915,22 +915,28 @@ Example:
             'iframe[src="javascript:document.open();document.close();"]',
             '.compose-editor iframe',
             '.mail-editor iframe',
-            'iframe[class*="editor"]'
+            'iframe[class*="editor"]',
+            'iframe[allowtransparency="true"]'
         ];
         
         for (const selector of iframeSelectors) {
-            const iframe = document.querySelector(selector);
-            if (iframe) {
+            const iframes = document.querySelectorAll(selector);
+            for (const iframe of iframes) {
                 try {
                     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    // Alimail editor body is usually the iframe's body or a contenteditable div inside
-                    let body = iframeDoc.body;
+                    if (!iframeDoc) continue;
+                    
+                    // Alimail editor body is usually the iframe's body with contenteditable="true"
+                    const body = iframeDoc.body;
+                    if (body && body.getAttribute('contenteditable') === 'true') {
+                        insertTextAtCursor(body, text, iframeDoc);
+                        return true;
+                    }
+                    
+                    // Or find contenteditable element inside
                     const contentEditable = iframeDoc.querySelector('[contenteditable="true"]');
                     if (contentEditable) {
-                        body = contentEditable;
-                    }
-                    if (body) {
-                        insertTextAtCursor(body, text);
+                        insertTextAtCursor(contentEditable, text, iframeDoc);
                         return true;
                     }
                 } catch (e) {
@@ -954,7 +960,7 @@ Example:
             const el = document.querySelector(selector);
             if (el) {
                 if (el.isContentEditable || el.getAttribute('contenteditable') === 'true') {
-                    insertTextAtCursor(el, text);
+                    insertTextAtCursor(el, text, document);
                     return true;
                 }
             }
@@ -964,7 +970,7 @@ Example:
         const contentEditables = document.querySelectorAll('[contenteditable="true"]');
         for (const el of contentEditables) {
             if (el.offsetParent !== null && el.textContent.length < 10000) {
-                insertTextAtCursor(el, text);
+                insertTextAtCursor(el, text, document);
                 return true;
             }
         }
@@ -973,39 +979,62 @@ Example:
     }
     
     // Helper to insert text at cursor position
-    function insertTextAtCursor(element, text) {
-        // If element has focus and selection API is available
-        if (document.activeElement === element || element.contains(document.activeElement)) {
-            const selection = window.getSelection();
-            if (selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
-                
-                // Delete any selected content
-                range.deleteContents();
-                
-                // Create text node and insert
-                const textNode = document.createTextNode(text);
-                range.insertNode(textNode);
-                
-                // Move cursor after inserted text
-                range.setStartAfter(textNode);
-                range.setEndAfter(textNode);
-                selection.removeAllRanges();
-                selection.addRange(range);
-                return;
+    function insertTextAtCursor(element, text, doc) {
+        doc = doc || document;
+        const win = doc.defaultView || window;
+        
+        // Focus the element first
+        element.focus();
+        
+        // Get selection from the correct document
+        const selection = win.getSelection();
+        
+        // Check if we have a valid selection within this element
+        let range = null;
+        if (selection.rangeCount > 0) {
+            const currentRange = selection.getRangeAt(0);
+            // Check if the selection is inside our element
+            if (element.contains(currentRange.commonAncestorContainer)) {
+                range = currentRange;
             }
         }
         
-        // Fallback: append to element
-        const currentContent = element.innerHTML || element.textContent;
-        const hasContent = currentContent.trim().length > 0;
-        
-        if (hasContent) {
-            // Add line breaks before new content
-            element.innerHTML = currentContent + '<br><br>' + escapeHtml(text).replace(/\n/g, '<br>');
-        } else {
-            element.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+        // If no valid range, create one at the end of the element
+        if (!range) {
+            range = doc.createRange();
+            range.selectNodeContents(element);
+            range.collapse(false); // Collapse to end
+            selection.removeAllRanges();
+            selection.addRange(range);
         }
+        
+        // Delete any selected content
+        range.deleteContents();
+        
+        // Create fragment with the text (preserve line breaks)
+        const lines = text.split('\n');
+        const fragment = doc.createDocumentFragment();
+        
+        lines.forEach((line, index) => {
+            if (line) {
+                fragment.appendChild(doc.createTextNode(line));
+            }
+            if (index < lines.length - 1) {
+                fragment.appendChild(doc.createElement('br'));
+            }
+        });
+        
+        // Insert the fragment
+        range.insertNode(fragment);
+        
+        // Move cursor after inserted text
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        // Trigger input event to notify Alimail of the change
+        const inputEvent = new Event('input', { bubbles: true });
+        element.dispatchEvent(inputEvent);
     }
 
     // Show generated result
