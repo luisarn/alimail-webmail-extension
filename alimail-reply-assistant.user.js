@@ -477,6 +477,7 @@
         #alimail-reply-overlay .alimail-generate-btn {
             width: 100%;
             margin-top: auto;
+            margin-bottom: 16px;
             padding: 12px;
             font-size: 14px;
             display: flex;
@@ -499,12 +500,16 @@
         #alimail-reply-overlay .alimail-button-row {
             display: flex;
             gap: 8px;
-            margin-top: 12px;
+            margin-top: 16px;
+            align-items: center;
         }
         
         #alimail-reply-overlay .alimail-button-row .alimail-button {
             flex: 1;
             margin-top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         /* Right Column - Result */
@@ -863,7 +868,7 @@ Example:
         
         generateBtn.disabled = true;
         generateBtn.textContent = '⏳ Generating...';
-        resultContainer.innerHTML = '<div class="alimail-loading">Generating your reply...</div>';
+        resultContainer.innerHTML = '<div class="alimail-loading">Generating your reply</div>';
         
         try {
             const response = await callGenerateAPI(originalEmail, userInput, tone, language);
@@ -885,36 +890,52 @@ Example:
 
     // Insert text into Alimail email body
     function insertIntoEmailBody(text) {
-        // Try to find the email compose editor
+        // Try to find the email compose editor iframe first (Alimail uses e_iframe e_scroll)
+        const iframeSelectors = [
+            'iframe.e_iframe.e_scroll',
+            '.e_editor iframe',
+            'iframe[src="javascript:document.open();document.close();"]',
+            '.compose-editor iframe',
+            '.mail-editor iframe',
+            'iframe[class*="editor"]'
+        ];
+        
+        for (const selector of iframeSelectors) {
+            const iframe = document.querySelector(selector);
+            if (iframe) {
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    // Alimail editor body is usually the iframe's body or a contenteditable div inside
+                    let body = iframeDoc.body;
+                    const contentEditable = iframeDoc.querySelector('[contenteditable="true"]');
+                    if (contentEditable) {
+                        body = contentEditable;
+                    }
+                    if (body) {
+                        insertTextAtCursor(body, text);
+                        return true;
+                    }
+                } catch (e) {
+                    // Cross-origin or other issue
+                    continue;
+                }
+            }
+        }
+        
+        // Fallback: try other editor selectors
         const editorSelectors = [
             '.e_editor_body',
             '[contenteditable="true"]',
             '.mail-body-editable',
             '.compose-body',
             '.reply-body',
-            '.email-body',
-            'iframe[src*="compose"]',
-            '.e_editor iframe'
+            '.email-body'
         ];
         
         for (const selector of editorSelectors) {
             const el = document.querySelector(selector);
             if (el) {
-                // If it's an iframe
-                if (el.tagName === 'IFRAME') {
-                    try {
-                        const iframeDoc = el.contentDocument || el.contentWindow.document;
-                        const body = iframeDoc.body || iframeDoc.querySelector('[contenteditable="true"]');
-                        if (body) {
-                            // Insert text at cursor position or append
-                            insertTextAtCursor(body, text);
-                            return true;
-                        }
-                    } catch (e) {
-                        // Cross-origin or other issue
-                        continue;
-                    }
-                } else if (el.isContentEditable || el.getAttribute('contenteditable') === 'true') {
+                if (el.isContentEditable || el.getAttribute('contenteditable') === 'true') {
                     insertTextAtCursor(el, text);
                     return true;
                 }
