@@ -30,7 +30,7 @@
             primary: '#5f6368',
             primaryHover: '#494c50',
             buttonText: '#ffffff',
-            copyBtn: '#1a73e8',
+            copyBtn: '#1557b0',
             copyBtnHover: '#1557b0'
         },
         blue: {
@@ -512,7 +512,7 @@
         }
         
         #alimail-reply-overlay .alimail-insert-btn.inserted {
-            background: #34a853 !important;
+            
         }
         
         #alimail-reply-overlay .alimail-button-row {
@@ -552,21 +552,25 @@
         }
         
         #alimail-reply-overlay .alimail-loading {
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             padding: 60px 20px;
             color: #5f6368;
+            gap: 12px;
         }
         
         #alimail-reply-overlay .alimail-loading::before {
             content: '';
-            display: inline-block;
+            display: block;
             width: 24px;
             height: 24px;
             border: 2px solid #e8eaed;
             border-top-color: currentColor;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 12px;
+            order: -1;
         }
         
         @keyframes spin {
@@ -1105,7 +1109,7 @@ Example:
         insertBtn.addEventListener('click', function() {
             const success = insertIntoEmailBody(generatedText);
             if (success) {
-                this.textContent = '✅ Inserted!';
+                this.textContent = 'Inserted!';
                 this.classList.add('inserted');
                 setTimeout(() => {
                     this.textContent = 'Insert to Email';
