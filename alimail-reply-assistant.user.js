@@ -447,6 +447,29 @@
             font-size: 14px;
         }
         
+        #alimail-reply-overlay .alimail-insert-btn {
+            background: #1a73e8;
+        }
+        
+        #alimail-reply-overlay .alimail-insert-btn:hover:not(:disabled) {
+            background: #1557b0;
+        }
+        
+        #alimail-reply-overlay .alimail-insert-btn.inserted {
+            background: #34a853;
+        }
+        
+        #alimail-reply-overlay .alimail-button-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        #alimail-reply-overlay .alimail-button-row .alimail-button {
+            flex: 1;
+            margin-top: 0;
+        }
+        
         /* Right Column - Result */
         #alimail-reply-overlay .alimail-result-box {
             background: #f8f9fa;
@@ -825,6 +848,92 @@ Example:
         }
     }
 
+    // Insert text into Alimail email body
+    function insertIntoEmailBody(text) {
+        // Try to find the email compose editor
+        const editorSelectors = [
+            '.e_editor_body',
+            '[contenteditable="true"]',
+            '.mail-body-editable',
+            '.compose-body',
+            '.reply-body',
+            '.email-body',
+            'iframe[src*="compose"]',
+            '.e_editor iframe'
+        ];
+        
+        for (const selector of editorSelectors) {
+            const el = document.querySelector(selector);
+            if (el) {
+                // If it's an iframe
+                if (el.tagName === 'IFRAME') {
+                    try {
+                        const iframeDoc = el.contentDocument || el.contentWindow.document;
+                        const body = iframeDoc.body || iframeDoc.querySelector('[contenteditable="true"]');
+                        if (body) {
+                            // Insert text at cursor position or append
+                            insertTextAtCursor(body, text);
+                            return true;
+                        }
+                    } catch (e) {
+                        // Cross-origin or other issue
+                        continue;
+                    }
+                } else if (el.isContentEditable || el.getAttribute('contenteditable') === 'true') {
+                    insertTextAtCursor(el, text);
+                    return true;
+                }
+            }
+        }
+        
+        // Fallback: try to find any contenteditable area in the document
+        const contentEditables = document.querySelectorAll('[contenteditable="true"]');
+        for (const el of contentEditables) {
+            if (el.offsetParent !== null && el.textContent.length < 10000) {
+                insertTextAtCursor(el, text);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    // Helper to insert text at cursor position
+    function insertTextAtCursor(element, text) {
+        // If element has focus and selection API is available
+        if (document.activeElement === element || element.contains(document.activeElement)) {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                
+                // Delete any selected content
+                range.deleteContents();
+                
+                // Create text node and insert
+                const textNode = document.createTextNode(text);
+                range.insertNode(textNode);
+                
+                // Move cursor after inserted text
+                range.setStartAfter(textNode);
+                range.setEndAfter(textNode);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                return;
+            }
+        }
+        
+        // Fallback: append to element
+        const currentContent = element.innerHTML || element.textContent;
+        const hasContent = currentContent.trim().length > 0;
+        
+        if (hasContent) {
+            // Add line breaks before new content
+            element.innerHTML = currentContent + '<br><br>' + escapeHtml(text).replace(/\n/g, '<br>');
+        } else {
+            element.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+        }
+    }
+
     // Show generated result
     function showResult(generatedText, colors) {
         const resultContainer = document.getElementById('alimail-result-container');
@@ -832,16 +941,20 @@ Example:
         
         resultContainer.innerHTML = `
             <div class="alimail-result-box">${escapeHtml(generatedText)}</div>
-            <button class="alimail-button alimail-copy-btn" id="alimail-copy" style="margin-top: 12px; width: 100%; background: ${colors.copyBtn};">📋 Copy to Clipboard</button>
+            <div class="alimail-button-row">
+                <button class="alimail-button alimail-copy-btn" id="alimail-copy" style="background: ${colors.copyBtn};">📋 Copy</button>
+                <button class="alimail-button alimail-insert-btn" id="alimail-insert" style="background: ${colors.primary};">📧 Insert to Email</button>
+            </div>
         `;
         
+        // Copy button handler
         const copyBtn = document.getElementById('alimail-copy');
         copyBtn.addEventListener('click', async function() {
             try {
                 await navigator.clipboard.writeText(generatedText);
                 this.textContent = '✅ Copied!';
                 setTimeout(() => {
-                    this.textContent = '📋 Copy to Clipboard';
+                    this.textContent = '📋 Copy';
                 }, 2000);
             } catch (err) {
                 const textArea = document.createElement('textarea');
@@ -853,13 +966,41 @@ Example:
                 
                 this.textContent = '✅ Copied!';
                 setTimeout(() => {
-                    this.textContent = '📋 Copy to Clipboard';
+                    this.textContent = '📋 Copy';
                 }, 2000);
             }
         });
-        
         copyBtn.onmouseenter = () => copyBtn.style.background = colors.copyBtnHover;
         copyBtn.onmouseleave = () => copyBtn.style.background = colors.copyBtn;
+        
+        // Insert button handler
+        const insertBtn = document.getElementById('alimail-insert');
+        insertBtn.addEventListener('click', function() {
+            const success = insertIntoEmailBody(generatedText);
+            if (success) {
+                this.textContent = '✅ Inserted!';
+                this.classList.add('inserted');
+                setTimeout(() => {
+                    this.textContent = '📧 Insert to Email';
+                    this.classList.remove('inserted');
+                }, 2000);
+            } else {
+                this.textContent = '❌ Failed';
+                setTimeout(() => {
+                    this.textContent = '📧 Insert to Email';
+                }, 2000);
+            }
+        });
+        insertBtn.onmouseenter = () => {
+            if (!insertBtn.classList.contains('inserted')) {
+                insertBtn.style.background = colors.primaryHover;
+            }
+        };
+        insertBtn.onmouseleave = () => {
+            if (!insertBtn.classList.contains('inserted')) {
+                insertBtn.style.background = colors.primary;
+            }
+        };
     }
 
     // Escape HTML
