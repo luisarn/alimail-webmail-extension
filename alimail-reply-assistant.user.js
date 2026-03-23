@@ -87,7 +87,16 @@
 
     // Detect current Alimail theme
     function detectTheme() {
-        // Try to get the header/navbar background color
+        // First, try #app-body background color (theme control element)
+        const appBody = document.getElementById('app-body');
+        if (appBody) {
+            const bgColor = window.getComputedStyle(appBody).backgroundColor;
+            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                return matchColorToTheme(bgColor);
+            }
+        }
+        
+        // Fallback: try other header selectors
         const possibleHeaders = [
             '.header-container',
             '.mail-header',
