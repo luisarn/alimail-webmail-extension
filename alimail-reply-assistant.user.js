@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      2.2
 // @description  Auto-generate professional email replies for Alimail webmail - Theme-aware 2 Column Layout
-// @author       Tifa Lockhart
+// @author       luisarn
 // @match        https://qiye.aliyun.com/alimail/*
 // @grant        GM_addStyle
 // @grant        GM_xmlhttpRequest
