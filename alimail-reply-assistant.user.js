@@ -576,14 +576,13 @@
         overlay.id = 'alimail-reply-overlay';
         overlay.innerHTML = `
             <div class="alimail-header">
-                <span>📝 AI Reply Assistant</span>
+                <span>AI Reply Assistant</span>
                 <span class="alimail-close" title="Close (Esc)">✕</span>
             </div>
             <div class="alimail-content">
                 <!-- Left Column: Input (Original Email + Key Points) -->
                 <div class="alimail-column">
                     <div class="alimail-column-header">
-                        <span>📧</span>
                         <span>Compose Reply</span>
                     </div>
                     <div class="alimail-column-content">
@@ -629,14 +628,13 @@ Example:
                         </div>
                         
                         <!-- Generate Button -->
-                        <button class="alimail-button alimail-generate-btn" id="alimail-generate">✨ Generate Reply</button>
+                        <button class="alimail-button alimail-generate-btn" id="alimail-generate">Generate Reply</button>
                     </div>
                 </div>
                 
                 <!-- Right Column: Generated Reply -->
                 <div class="alimail-column">
                     <div class="alimail-column-header">
-                        <span>✨</span>
                         <span>Generated Reply</span>
                     </div>
                     <div class="alimail-column-content" id="alimail-result-container">
@@ -688,7 +686,7 @@ Example:
         aiBtn.setAttribute('_clk', 'exec');
         aiBtn.setAttribute('title', 'AI Reply Assistant');
         aiBtn.setAttribute('jstype', 'ToolbarCommonButton');
-        aiBtn.innerHTML = '<b class="e_i e_i_fs16 e_i_hover ai-icon">AI</b>';
+        aiBtn.innerHTML = '<b class="e_i e_i_fs16 e_i_hover ai-icon" style="font-style: normal;">AI</b>';
 
         // Insert after subscript button
         subscriptBtn.insertAdjacentElement('afterend', aiBtn);
@@ -828,7 +826,7 @@ Example:
         
         generateBtn.disabled = true;
         generateBtn.textContent = '⏳ Generating...';
-        resultContainer.innerHTML = '<div class="alimail-loading">Generating your professional reply...</div>';
+        resultContainer.innerHTML = '<div class="alimail-loading">Generating your reply...</div>';
         
         try {
             const response = await callGenerateAPI(originalEmail, userInput, tone, language);
@@ -844,7 +842,7 @@ Example:
             `;
         } finally {
             generateBtn.disabled = false;
-            generateBtn.textContent = '✨ Generate Reply';
+            generateBtn.textContent = 'Generate Reply';
         }
     }
 
@@ -942,8 +940,8 @@ Example:
         resultContainer.innerHTML = `
             <div class="alimail-result-box">${escapeHtml(generatedText)}</div>
             <div class="alimail-button-row">
-                <button class="alimail-button alimail-copy-btn" id="alimail-copy" style="background: ${colors.copyBtn};">📋 Copy</button>
-                <button class="alimail-button alimail-insert-btn" id="alimail-insert" style="background: ${colors.primary};">📧 Insert to Email</button>
+                <button class="alimail-button alimail-copy-btn" id="alimail-copy" style="background: ${colors.copyBtn};">Copy</button>
+                <button class="alimail-button alimail-insert-btn" id="alimail-insert" style="background: ${colors.primary};">Insert to Email</button>
             </div>
         `;
         
@@ -954,7 +952,7 @@ Example:
                 await navigator.clipboard.writeText(generatedText);
                 this.textContent = '✅ Copied!';
                 setTimeout(() => {
-                    this.textContent = '📋 Copy';
+                    this.textContent = 'Copy';
                 }, 2000);
             } catch (err) {
                 const textArea = document.createElement('textarea');
@@ -966,7 +964,7 @@ Example:
                 
                 this.textContent = '✅ Copied!';
                 setTimeout(() => {
-                    this.textContent = '📋 Copy';
+                    this.textContent = 'Copy';
                 }, 2000);
             }
         });
@@ -981,13 +979,13 @@ Example:
                 this.textContent = '✅ Inserted!';
                 this.classList.add('inserted');
                 setTimeout(() => {
-                    this.textContent = '📧 Insert to Email';
+                    this.textContent = 'Insert to Email';
                     this.classList.remove('inserted');
                 }, 2000);
             } else {
                 this.textContent = '❌ Failed';
                 setTimeout(() => {
-                    this.textContent = '📧 Insert to Email';
+                    this.textContent = 'Insert to Email';
                 }, 2000);
             }
         });
