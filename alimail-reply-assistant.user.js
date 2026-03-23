@@ -218,15 +218,39 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             font-size: 14px;
-            width: 90vw;
+            width: 95vw;
             max-width: 900px;
-            height: 80vh;
+            height: 85vh;
             max-height: 600px;
             display: none;
             cursor: default;
             user-select: text;
             border: 1px solid #e0e0e0;
             overflow: hidden;
+        }
+        
+        @media (max-width: 768px) {
+            #alimail-reply-overlay {
+                width: 100vw;
+                height: 100vh;
+                max-width: 100vw;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+            
+            #alimail-reply-overlay .alimail-content {
+                flex-direction: column;
+            }
+            
+            #alimail-reply-overlay .alimail-column:first-child {
+                border-right: none;
+                border-bottom: 1px solid #e8eaed;
+                max-height: 50%;
+            }
+            
+            #alimail-reply-overlay .alimail-column {
+                max-height: 50%;
+            }
         }
         
         #alimail-reply-overlay.visible {
@@ -383,6 +407,7 @@
             font-family: inherit;
             cursor: pointer;
             transition: border-color 0.2s;
+            margin-bottom: 16px;
         }
         
         #alimail-reply-overlay .alimail-select:focus {
@@ -631,8 +656,8 @@ Example:
                             <div class="alimail-col">
                                 <div class="alimail-label">Language</div>
                                 <select class="alimail-select" id="alimail-language">
+                                    <option value="chinese" selected>繁體中文</option>
                                     <option value="english">English</option>
-                                    <option value="chinese">繁體中文</option>
                                     <option value="portuguese">Portuguese</option>
                                     <option value="mixed">Mixed</option>
                                 </select>
