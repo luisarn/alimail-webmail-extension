@@ -485,12 +485,30 @@
             justify-content: center;
         }
         
+        #alimail-reply-overlay .alimail-copy-btn {
+            background: #ffffff;
+            color: #202124;
+            border: 1px solid #dadce0;
+        }
+        
+        #alimail-reply-overlay .alimail-copy-btn:hover:not(:disabled) {
+            background: #f8f9fa;
+            border-color: #bdc1c6;
+        }
+        
+        #alimail-reply-overlay .alimail-copy-btn.copied {
+            background: #34a853;
+            color: white;
+            border-color: #34a853;
+        }
+        
         #alimail-reply-overlay .alimail-insert-btn {
-            background: #1a73e8;
+            background: rgb(239, 73, 68);
+            color: white;
         }
         
         #alimail-reply-overlay .alimail-insert-btn:hover:not(:disabled) {
-            background: #1557b0;
+            background: rgb(220, 60, 55);
         }
         
         #alimail-reply-overlay .alimail-insert-btn.inserted {
@@ -998,8 +1016,8 @@ Example:
         resultContainer.innerHTML = `
             <div class="alimail-result-box">${escapeHtml(generatedText)}</div>
             <div class="alimail-button-row">
-                <button class="alimail-button alimail-copy-btn" id="alimail-copy" style="background: ${colors.copyBtn};">Copy</button>
-                <button class="alimail-button alimail-insert-btn" id="alimail-insert" style="background: ${colors.primary};">Insert to Email</button>
+                <button class="alimail-button alimail-copy-btn" id="alimail-copy">Copy</button>
+                <button class="alimail-button alimail-insert-btn" id="alimail-insert">Insert to Email</button>
             </div>
         `;
         
@@ -1026,8 +1044,32 @@ Example:
                 }, 2000);
             }
         });
-        copyBtn.onmouseenter = () => copyBtn.style.background = colors.copyBtnHover;
-        copyBtn.onmouseleave = () => copyBtn.style.background = colors.copyBtn;
+        // Copy button hover effects are handled by CSS
+        copyBtn.addEventListener('click', async function() {
+            try {
+                await navigator.clipboard.writeText(generatedText);
+                this.textContent = 'Copied!';
+                this.classList.add('copied');
+                setTimeout(() => {
+                    this.textContent = 'Copy';
+                    this.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = generatedText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                this.textContent = 'Copied!';
+                this.classList.add('copied');
+                setTimeout(() => {
+                    this.textContent = 'Copy';
+                    this.classList.remove('copied');
+                }, 2000);
+            }
+        });
         
         // Insert button handler
         const insertBtn = document.getElementById('alimail-insert');
@@ -1047,16 +1089,7 @@ Example:
                 }, 2000);
             }
         });
-        insertBtn.onmouseenter = () => {
-            if (!insertBtn.classList.contains('inserted')) {
-                insertBtn.style.background = colors.primaryHover;
-            }
-        };
-        insertBtn.onmouseleave = () => {
-            if (!insertBtn.classList.contains('inserted')) {
-                insertBtn.style.background = colors.primary;
-            }
-        };
+        // Insert button hover effects are handled by CSS
     }
 
     // Escape HTML
