@@ -451,9 +451,12 @@
         
         #alimail-reply-overlay .alimail-generate-btn {
             width: 100%;
-            margin-top: 8px;
+            margin-top: auto;
             padding: 12px;
             font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         #alimail-reply-overlay .alimail-insert-btn {
