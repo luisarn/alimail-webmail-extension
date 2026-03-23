@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Alimail Reply Assistant
 // @namespace    http://tampermonkey.net/
-// @version      2.1
-// @description  Auto-generate professional email replies for Alimail webmail - 2 Column Layout with Alimail Theme
+// @version      2.2
+// @description  Auto-generate professional email replies for Alimail webmail - Theme-aware 2 Column Layout
 // @author       Tifa Lockhart
 // @match        https://qiye.aliyun.com/alimail/*
 // @grant        GM_addStyle
@@ -17,7 +17,185 @@
     // Server configuration
     const SERVER_URL = 'http://localhost:8000';
 
-    // CSS Styles - Alimail Theme (2 Column Layout)
+    // Theme definitions matching Alimail themes
+    const THEMES = {
+        black: {
+            primary: '#3a3a3a',
+            primaryHover: '#2a2a2a',
+            buttonText: '#ffffff',
+            copyBtn: '#4a4a4a',
+            copyBtnHover: '#3a3a3a'
+        },
+        silver: {
+            primary: '#5f6368',
+            primaryHover: '#494c50',
+            buttonText: '#ffffff',
+            copyBtn: '#1a73e8',
+            copyBtnHover: '#1557b0'
+        },
+        blue: {
+            primary: '#4a90d9',
+            primaryHover: '#357abd',
+            buttonText: '#ffffff',
+            copyBtn: '#34a853',
+            copyBtnHover: '#2d8e47'
+        },
+        red: {
+            primary: '#d9534f',
+            primaryHover: '#c9302c',
+            buttonText: '#ffffff',
+            copyBtn: '#5cb85c',
+            copyBtnHover: '#449d44'
+        },
+        gold: {
+            primary: '#c4a35a',
+            primaryHover: '#a88b4a',
+            buttonText: '#ffffff',
+            copyBtn: '#4a90d9',
+            copyBtnHover: '#357abd'
+        },
+        green: {
+            primary: '#3d8b5a',
+            primaryHover: '#2d6b45',
+            buttonText: '#ffffff',
+            copyBtn: '#4a90d9',
+            copyBtnHover: '#357abd'
+        },
+        lakeBlue: {
+            primary: '#3a8aa5',
+            primaryHover: '#2d6f87',
+            buttonText: '#ffffff',
+            copyBtn: '#34a853',
+            copyBtnHover: '#2d8e47'
+        },
+        pink: {
+            primary: '#d64d7a',
+            primaryHover: '#b53a63',
+            buttonText: '#ffffff',
+            copyBtn: '#4a90d9',
+            copyBtnHover: '#357abd'
+        },
+        // Default fallback
+        default: {
+            primary: '#1a73e8',
+            primaryHover: '#1557b0',
+            buttonText: '#ffffff',
+            copyBtn: '#34a853',
+            copyBtnHover: '#2d8e47'
+        }
+    };
+
+    // Detect current Alimail theme
+    function detectTheme() {
+        // Try to get the header/navbar background color
+        const possibleHeaders = [
+            '.header-container',
+            '.mail-header',
+            '.alimail-header',
+            '.nav-header',
+            '[class*="header"]',
+            '.top-bar',
+            '.navbar'
+        ];
+        
+        for (const selector of possibleHeaders) {
+            const header = document.querySelector(selector);
+            if (header) {
+                const bgColor = window.getComputedStyle(header).backgroundColor;
+                if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                    return matchColorToTheme(bgColor);
+                }
+            }
+        }
+        
+        // Try to find any element with theme-specific classes
+        const themeClasses = ['theme-black', 'theme-silver', 'theme-blue', 'theme-red', 
+                              'theme-gold', 'theme-green', 'theme-lake-blue', 'theme-pink'];
+        for (const cls of themeClasses) {
+            if (document.querySelector('.' + cls) || document.body.classList.contains(cls)) {
+                return cls.replace('theme-', '').replace('-', '');
+            }
+        }
+        
+        return 'default';
+    }
+
+    // Match RGB color to closest theme
+    function matchColorToTheme(rgbColor) {
+        // Parse RGB values
+        const match = rgbColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (!match) return 'default';
+        
+        const [_, r, g, b] = match.map(Number);
+        
+        // Calculate distances to theme colors
+        const themeColors = {
+            black: { r: 58, g: 58, b: 58 },
+            blue: { r: 74, g: 144, b: 217 },
+            red: { r: 217, g: 83, b: 79 },
+            gold: { r: 196, g: 163, b: 90 },
+            green: { r: 61, g: 139, b: 90 },
+            lakeBlue: { r: 58, g: 138, b: 165 },
+            pink: { r: 214, g: 77, b: 122 }
+        };
+        
+        // Check if it's light (silver theme)
+        const brightness = (r + g + b) / 3;
+        if (brightness > 200) return 'silver';
+        
+        let closestTheme = 'default';
+        let minDistance = Infinity;
+        
+        for (const [theme, color] of Object.entries(themeColors)) {
+            const distance = Math.sqrt(
+                Math.pow(r - color.r, 2) + 
+                Math.pow(g - color.g, 2) + 
+                Math.pow(b - color.b, 2)
+            );
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestTheme = theme;
+            }
+        }
+        
+        return closestTheme;
+    }
+
+    // Get current theme colors
+    function getCurrentThemeColors() {
+        const themeName = detectTheme();
+        return THEMES[themeName] || THEMES.default;
+    }
+
+    // Apply theme to the overlay
+    function applyTheme() {
+        const colors = getCurrentThemeColors();
+        const overlay = document.getElementById('alimail-reply-overlay');
+        if (!overlay) return;
+        
+        const header = overlay.querySelector('.alimail-header');
+        const buttons = overlay.querySelectorAll('.alimail-button:not(.alimail-copy-btn)');
+        const copyBtn = overlay.querySelector('.alimail-copy-btn');
+        
+        if (header) {
+            header.style.background = colors.primary;
+        }
+        
+        buttons.forEach(btn => {
+            btn.style.background = colors.primary;
+            btn.style.color = colors.buttonText;
+            btn.onmouseenter = () => btn.style.background = colors.primaryHover;
+            btn.onmouseleave = () => btn.style.background = colors.primary;
+        });
+        
+        if (copyBtn) {
+            copyBtn.style.background = colors.copyBtn;
+            copyBtn.onmouseenter = () => copyBtn.style.background = colors.copyBtnHover;
+            copyBtn.onmouseleave = () => copyBtn.style.background = colors.copyBtn;
+        }
+    }
+
+    // CSS Styles - Theme-aware 2 Column Layout
     const styles = `
         #alimail-reply-overlay {
             position: fixed;
@@ -53,7 +231,7 @@
             to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         }
         
-        /* Header - Alimail Blue */
+        /* Header */
         #alimail-reply-overlay .alimail-header {
             background: #1a73e8;
             color: white;
@@ -64,6 +242,7 @@
             justify-content: space-between;
             align-items: center;
             flex-shrink: 0;
+            transition: background 0.3s;
         }
         
         #alimail-reply-overlay .alimail-close {
@@ -242,19 +421,23 @@
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            transition: background 0.2s, box-shadow 0.2s;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
             font-family: inherit;
         }
         
         #alimail-reply-overlay .alimail-button:hover {
-            background: #1557b0;
             box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        #alimail-reply-overlay .alimail-button:active {
+            transform: translateY(1px);
         }
         
         #alimail-reply-overlay .alimail-button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             box-shadow: none;
+            transform: none;
         }
         
         #alimail-reply-overlay .alimail-generate-btn {
@@ -262,18 +445,6 @@
             margin-top: 8px;
             padding: 12px;
             font-size: 14px;
-        }
-        
-        #alimail-reply-overlay .alimail-copy-btn {
-            background: #34a853;
-        }
-        
-        #alimail-reply-overlay .alimail-copy-btn:hover {
-            background: #2d8e47;
-        }
-        
-        #alimail-reply-overlay .alimail-copy-btn.copied {
-            background: #188038;
         }
         
         /* Right Column - Result */
@@ -309,7 +480,7 @@
             width: 24px;
             height: 24px;
             border: 2px solid #e8eaed;
-            border-top-color: #1a73e8;
+            border-top-color: currentColor;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-bottom: 12px;
@@ -358,7 +529,6 @@
         }
         
         #alimail-assistant-btn:hover {
-            background: #1557b0;
             transform: scale(1.05);
             box-shadow: 0 4px 15px rgba(0,0,0,0.25);
         }
@@ -379,7 +549,7 @@
     // Global state
     let generatedReplyText = '';
 
-    // Create overlay element with 2-column layout
+    // Create overlay element
     function createOverlay() {
         const overlay = document.createElement('div');
         overlay.id = 'alimail-reply-overlay';
@@ -458,6 +628,9 @@ Example:
         `;
         document.body.appendChild(overlay);
 
+        // Apply theme
+        applyTheme();
+
         // Close button
         overlay.querySelector('.alimail-close').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -489,6 +662,7 @@ Example:
             } else {
                 updateOriginalEmail();
                 overlay.classList.add('visible');
+                applyTheme(); // Re-apply theme when opening
             }
         });
 
@@ -598,6 +772,7 @@ Example:
         const originalEmail = originalEl ? (originalEl.dataset.fullText || originalEl.textContent) : '';
         const resultContainer = document.getElementById('alimail-result-container');
         const generateBtn = document.getElementById('alimail-generate');
+        const colors = getCurrentThemeColors();
         
         if (!userInput) {
             resultContainer.innerHTML = '<div class="alimail-error">Please enter some key points for the reply.</div>';
@@ -611,7 +786,7 @@ Example:
         try {
             const response = await callGenerateAPI(originalEmail, userInput, tone, language);
             generatedReplyText = response.generated_reply;
-            showResult(generatedReplyText);
+            showResult(generatedReplyText, colors);
         } catch (error) {
             resultContainer.innerHTML = `
                 <div class="alimail-error">
@@ -627,22 +802,22 @@ Example:
     }
 
     // Show generated result
-    function showResult(generatedText) {
+    function showResult(generatedText, colors) {
         const resultContainer = document.getElementById('alimail-result-container');
+        colors = colors || getCurrentThemeColors();
         
         resultContainer.innerHTML = `
             <div class="alimail-result-box">${escapeHtml(generatedText)}</div>
-            <button class="alimail-button alimail-copy-btn" id="alimail-copy" style="margin-top: 12px; width: 100%;">📋 Copy to Clipboard</button>
+            <button class="alimail-button alimail-copy-btn" id="alimail-copy" style="margin-top: 12px; width: 100%; background: ${colors.copyBtn};">📋 Copy to Clipboard</button>
         `;
         
-        document.getElementById('alimail-copy').addEventListener('click', async function() {
+        const copyBtn = document.getElementById('alimail-copy');
+        copyBtn.addEventListener('click', async function() {
             try {
                 await navigator.clipboard.writeText(generatedText);
                 this.textContent = '✅ Copied!';
-                this.classList.add('copied');
                 setTimeout(() => {
                     this.textContent = '📋 Copy to Clipboard';
-                    this.classList.remove('copied');
                 }, 2000);
             } catch (err) {
                 const textArea = document.createElement('textarea');
@@ -653,13 +828,14 @@ Example:
                 document.body.removeChild(textArea);
                 
                 this.textContent = '✅ Copied!';
-                this.classList.add('copied');
                 setTimeout(() => {
                     this.textContent = '📋 Copy to Clipboard';
-                    this.classList.remove('copied');
                 }, 2000);
             }
         });
+        
+        copyBtn.onmouseenter = () => copyBtn.style.background = colors.copyBtnHover;
+        copyBtn.onmouseleave = () => copyBtn.style.background = colors.copyBtn;
     }
 
     // Escape HTML
