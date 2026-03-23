@@ -2,7 +2,7 @@
 
 A Tampermonkey userscript + Docker backend for generating professional email replies in Alimail Webmail (https://qiye.aliyun.com/alimail/).
 
-![Version](https://img.shields.io/badge/version-1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.3-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 ## Overview
@@ -11,16 +11,18 @@ This tool helps draft professional email replies quickly by:
 1. Extracting the original email content from Alimail
 2. Taking your bullet points/notes as input
 3. Using an LLM to generate a well-structured, professional reply
-4. Providing a one-click copy button to paste into the email editor
+4. Inserting the reply directly into the email editor or copying to clipboard
 
 ## Features
 
-- ✨ **AI-Powered Generation**: Uses your local LLM or OpenAI API to generate replies
-- 🎨 **Beautiful UI**: Matching the Cantonese Romanizer design with gradient styling
-- 🌍 **Multi-Language**: Support for English, Traditional Chinese, Portuguese, or Mixed
-- 📝 **Tone Options**: Professional, Friendly, Concise, or Detailed
-- 📋 **One-Click Copy**: Easy copy-to-clipboard functionality
-- 🔒 **Privacy**: Runs locally - your emails don't leave your machine
+- **AI-Powered Generation**: Uses your local LLM or OpenAI API to generate replies
+- **Theme-Aware UI**: Automatically matches Alimail's color theme (8 themes supported)
+- **Toolbar Integration**: AI button appears directly in Alimail's compose toolbar
+- **2-Column Layout**: View original email and compose reply side by side
+- **One-Click Insert**: Insert generated reply directly into the email body
+- **Multi-Language**: Support for Traditional Chinese, English, Portuguese, or Mixed
+- **Tone Options**: Professional, Friendly, Concise, or Detailed
+- **Privacy**: Runs locally - your emails don't leave your machine
 
 ## Quick Start
 
@@ -72,17 +74,32 @@ docker-compose up -d
 
 1. Open Alimail Webmail at `https://qiye.aliyun.com/alimail/`
 2. Click **Reply** on any email (you should see the URL change to `/compose`)
-3. Click the **✨ floating button** at the bottom-right of the screen
-4. The original email will be extracted automatically
+3. Click the **AI** button in the toolbar (next to X₂ subscript button)
+4. The popup will appear with 2 columns:
+   - **Left column**: Original email (auto-extracted) and your key points input
+   - **Right column**: Generated reply
 5. Enter your bullet points in the text area:
    ```
    - Apologize for the delay
    - Request additional documents
    - Meeting is scheduled for Friday at 3pm
    ```
-6. Select your preferred **Tone** and **Language**
-7. Click **Generate Reply**
-8. Click **Copy to Clipboard** and paste into Alimail's compose area
+6. Select your preferred **Tone** (Professional/Friendly/Concise/Detailed)
+7. Select **Language** (Traditional Chinese/English/Portuguese/Mixed)
+8. Click **Generate Reply**
+9. Click **Insert to Email** to add directly to the compose area, or **Copy** to clipboard
+
+## Supported Themes
+
+The UI automatically detects and matches Alimail's theme:
+- Black
+- Silver
+- Blue
+- Red
+- Gold
+- Green
+- Lake Blue
+- Pink
 
 ## Development
 
@@ -115,7 +132,7 @@ curl -X POST http://localhost:8000/generate-reply \
     "original_email": "Dear Sir, I need information about...",
     "user_input": "Provide the requested information, attach form A",
     "tone": "professional",
-    "language": "english"
+    "language": "chinese"
   }'
 ```
 
@@ -142,10 +159,16 @@ curl http://localhost:4000/v1/models
 docker-compose config
 ```
 
-### Script not appearing
+### AI button not appearing in toolbar
 - Ensure you're on a `/compose` URL
 - Check browser console (F12) for errors
 - Verify Tampermonkey is enabled for `qiye.aliyun.com`
+- Try refreshing the page after navigating to compose
+
+### Insert to Email not working
+- Ensure the email editor iframe is loaded
+- Try clicking inside the email body first to focus it
+- Check browser console for any errors
 
 ## Architecture
 
@@ -154,12 +177,12 @@ docker-compose config
 │  Alimail Webmail │────▶│  Tampermonkey   │────▶│  FastAPI Server │
 │  (webmail)      │     │  Userscript     │     │  (localhost:8000)│
 └─────────────────┘     └─────────────────┘     └─────────────────┘
-                                                        │
-                                                        ▼
-                                                ┌─────────────────┐
-                                                │  LLM Server     │
-                                                │  (OpenAI/Local) │
-                                                └─────────────────┘
+                                │                         │
+                                ▼                         ▼
+                        ┌─────────────────┐     ┌─────────────────┐
+                        │  Alimail Editor │     │  LLM Server     │
+                        │  (iframe)       │     │  (OpenAI/Local) │
+                        └─────────────────┘     └─────────────────┘
 ```
 
 ## Project Structure
@@ -180,7 +203,3 @@ alimail-webmail-extension/
 ## License
 
 MIT License
-
-## Credits
-
-Design inspired by the [Cantonese Romanizer](https://github.com/luisarn/cantonese-romanizer) project.
