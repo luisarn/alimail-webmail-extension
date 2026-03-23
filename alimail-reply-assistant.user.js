@@ -507,34 +507,32 @@
             font-family: monospace;
         }
 
-        /* Floating button */
-        #alimail-assistant-btn {
-            position: fixed;
-            right: 24px;
-            bottom: 24px;
-            z-index: 999998;
-            background: #1a73e8;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 56px;
-            height: 56px;
-            font-size: 24px;
+        /* AI Toolbar Button - Matches Alimail toolbar style */
+        #alimail-ai-toolbar-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            transition: all 0.2s;
+        }
+        
+        #alimail-ai-toolbar-btn:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        
+        #alimail-ai-toolbar-btn .ai-icon {
+            width: 16px;
+            height: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #666;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         
-        #alimail-assistant-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
-        }
-        
-        #alimail-assistant-btn.hidden {
-            display: none;
+        #alimail-ai-toolbar-btn:hover .ai-icon {
+            color: #333;
         }
     `;
 
@@ -646,27 +644,53 @@ Example:
         return overlay;
     }
 
-    // Create floating button
-    function createFloatingButton() {
-        const btn = document.createElement('button');
-        btn.id = 'alimail-assistant-btn';
-        btn.innerHTML = '✨';
-        btn.title = 'AI Reply Assistant';
-        btn.classList.add('hidden');
-        document.body.appendChild(btn);
+    // Create toolbar button (inserted into Alimail's toolbar)
+    function createToolbarButton() {
+        // Find the toolbar
+        const toolbar = document.querySelector('.e_editor_toolbar');
+        if (!toolbar) return null;
 
-        btn.addEventListener('click', () => {
+        // Find the subscript button (the one before where we want to insert)
+        const subscriptBtn = document.getElementById('sqm_339') || 
+                            document.querySelector('[_id="subscript"]') ||
+                            toolbar.querySelector('.e_i_subscript')?.closest('.e_editor_toolbar_item');
+        
+        if (!subscriptBtn) return null;
+
+        // Create AI button matching Alimail's toolbar style
+        const aiBtn = document.createElement('div');
+        aiBtn.id = 'alimail-ai-toolbar-btn';
+        aiBtn.className = 'e_editor_toolbar_item e_editor_toolbar_b_wrap e_editor_toolbar_w';
+        aiBtn.setAttribute('_id', 'aireply');
+        aiBtn.setAttribute('_clk', 'exec');
+        aiBtn.setAttribute('title', 'AI Reply Assistant');
+        aiBtn.setAttribute('jstype', 'ToolbarCommonButton');
+        aiBtn.innerHTML = '<b class="e_i e_i_fs16 e_i_hover ai-icon">AI</b>';
+
+        // Insert after subscript button
+        subscriptBtn.insertAdjacentElement('afterend', aiBtn);
+
+        // Add click handler
+        aiBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             const overlay = document.getElementById('alimail-reply-overlay') || createOverlay();
             if (overlay.classList.contains('visible')) {
                 overlay.classList.remove('visible');
             } else {
                 updateOriginalEmail();
                 overlay.classList.add('visible');
-                applyTheme(); // Re-apply theme when opening
+                applyTheme();
             }
         });
 
-        return btn;
+        return aiBtn;
+    }
+
+    // Remove toolbar button if it exists
+    function removeToolbarButton() {
+        const btn = document.getElementById('alimail-ai-toolbar-btn');
+        if (btn) btn.remove();
     }
 
     // Extract original email content
@@ -854,14 +878,21 @@ Example:
 
     // Initialize
     function init() {
-        const floatingBtn = createFloatingButton();
         createOverlay();
         
+        // Track toolbar button
+        let toolbarBtn = null;
+        
         function updateVisibility() {
-            if (isComposePage()) {
-                floatingBtn.classList.remove('hidden');
+            const isCompose = isComposePage();
+            if (isCompose) {
+                // Add toolbar button if not present
+                if (!document.getElementById('alimail-ai-toolbar-btn')) {
+                    toolbarBtn = createToolbarButton();
+                }
             } else {
-                floatingBtn.classList.add('hidden');
+                // Remove toolbar button and close overlay
+                removeToolbarButton();
                 const overlay = document.getElementById('alimail-reply-overlay');
                 if (overlay) overlay.classList.remove('visible');
             }
