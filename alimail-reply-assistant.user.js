@@ -862,7 +862,12 @@ Example:
                     data: JSON.stringify(payload),
                     onload: (response) => {
                         if (response.status === 200) {
-                            resolve(JSON.parse(response.responseText));
+                            try {
+                                const data = JSON.parse(response.responseText);
+                                resolve(data);
+                            } catch (e) {
+                                reject(new Error('Invalid JSON response. Is the server URL correct?'));
+                            }
                         } else {
                             reject(new Error(`Server error: ${response.status}`));
                         }
@@ -875,7 +880,10 @@ Example:
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 })
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) throw new Error(`Server error: ${r.status}`);
+                    return r.json();
+                })
                 .then(resolve)
                 .catch(reject);
             }
